@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mattsapp",
+  "main": "src/worker.ts",
   "compatibility_date": "2025-02-14",
   "compatibility_flags": [
     "nodejs_compat"
