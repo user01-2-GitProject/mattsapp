@@ -138,10 +138,13 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
   ]
 }`;
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${activeKey}`;
+      const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": activeKey
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }]
