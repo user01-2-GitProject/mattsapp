@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   collection,
   onSnapshot,
@@ -293,7 +293,7 @@ export default function App() {
     }
   };
 
-  const handleDeleteCard = async (cardId: string, e?: any) => {
+  const handleDeleteCard = async (cardId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!window.confirm("Confirm purging this asset from your private vault?")) return;
 
@@ -312,7 +312,7 @@ export default function App() {
     }
   };
 
-  const handleToggleWatchlist = async (cardId: string, currentVal: boolean, e?: any) => {
+  const handleToggleWatchlist = async (cardId: string, currentVal: boolean, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (db && currentUser && firebaseConnected && !cardId.startsWith("local_")) {
       try {
@@ -332,7 +332,7 @@ export default function App() {
     }
   };
 
-  const handleManualAddSubmit = async (e: any) => {
+  const handleManualAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualForm.player || !manualForm.set) return;
 
