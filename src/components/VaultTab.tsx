@@ -43,6 +43,21 @@ export const VaultTab: React.FC<VaultTabProps> = ({
   onDeleteCard,
   filteredVault
 }) => {
+  const counts = React.useMemo(() => {
+    let watchlist = 0;
+    let highValue = 0;
+    let raw = 0;
+
+    for (let i = 0; i < vaultCards.length; i++) {
+      const c = vaultCards[i];
+      if (c.isWatchlist) watchlist++;
+      if ((c.pricePoints?.fairValue || 0) >= 1000) highValue++;
+      if (c.gradeCompany === "RAW" || c.grade === "Ungraded") raw++;
+    }
+
+    return { watchlist, highValue, raw };
+  }, [vaultCards]);
+
   return (
     <div className="space-y-3.5 animate-in fade-in duration-200">
       <div className="bg-[#121622] border border-[#252d3d] rounded-xl p-3.5 space-y-2 shadow-xl">
@@ -106,9 +121,9 @@ export const VaultTab: React.FC<VaultTabProps> = ({
         <div className="flex space-x-1.5 overflow-x-auto pb-1 text-[10px] font-mono no-scrollbar">
           {[
             { id: "ALL", label: `ALL (${vaultCards.length})` },
-            { id: "WATCHLIST", label: `WATCHLIST (${vaultCards.filter((c) => c.isWatchlist).length})` },
-            { id: "HIGH_VALUE", label: `HIGH VALUE $1K+ (${vaultCards.filter((c) => (c.pricePoints?.fairValue || 0) >= 1000).length})` },
-            { id: "RAW", label: `RAW (${vaultCards.filter((c) => c.gradeCompany === "RAW" || c.grade === "Ungraded").length})` }
+            { id: "WATCHLIST", label: `WATCHLIST (${counts.watchlist})` },
+            { id: "HIGH_VALUE", label: `HIGH VALUE $1K+ (${counts.highValue})` },
+            { id: "RAW", label: `RAW (${counts.raw})` }
           ].map((f) => (
             <button
               key={f.id}
