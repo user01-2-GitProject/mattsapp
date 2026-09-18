@@ -313,7 +313,8 @@ export function executeMasterValuationFramework({
       Sc,
       beta,
       Ac,
-      Sz
+      Sz,
+      CpBase
     },
     shapValues: {
       base: shapBase,

@@ -106,14 +106,9 @@ export interface LatentClusterParams {
   CpBase: number;
 }
 
-export interface LatentCluster {
+export interface LatentCluster extends LatentClusterParams {
   clusterId: string;
   clusterName: string;
-  Sc: number;
-  beta: number;
-  Ac: number;
-  Sz: number;
-  CpBase: number;
 }
 
 export interface ShapValues {
