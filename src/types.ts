@@ -152,6 +152,18 @@ export interface ValuationOutput {
   };
 }
 
+export interface GroundingChunk {
+  web?: {
+    title?: string;
+    uri?: string;
+  };
+}
+
+export interface GroundingMetadata {
+  webSearchQueries?: string[];
+  groundingChunks?: GroundingChunk[];
+}
+
 export interface GroundingSource {
   title: string;
   uri: string;
