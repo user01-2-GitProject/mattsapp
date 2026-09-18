@@ -99,16 +99,34 @@ service cloud.firestore {
 
 ## Deployment
 
-The app is a static SPA. Any host that serves `dist/` works. Vercel is the intended target — see the task list below for what's needed before a Vercel preview is usable.
+The app is a static SPA. Any host that serves `dist/` works. Cloudflare Workers is the intended target — see the task list below for what's needed before a live Workers preview is usable.
 
-### Vercel (intended)
+### Cloudflare Workers (intended)
 
-- Connect the repo to a Vercel project.
-- Set the environment variables in the Vercel project settings (same names as `.env.example`).
-- Deploy. Vercel auto-detects the Vite app.
-- Firestore rules and Gemini keys are configured in their respective platforms, not in the repo.
+The repo ships a `wrangler.toml` configured to build the Vite app into `./dist` and serve it as a Cloudflare Workers static site with SPA fallback enabled:
 
-A `vercel.json` is not in the repo yet; for a SPA fallback on refresh you typically need either a `vercel.json` with a rewrite rule or the Vercel SPA handling enabled.
+```toml
+name = "mattsapp"
+compatibility_date = "2026-09-17"
+
+[build]
+command = "npm run build"
+
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
+```
+
+Deploy steps:
+
+1. Install [Wrangler](https://developers.cloudflare.com/workers/wrangler/) and authenticate: `npx wrangler login`.
+2. If this is a new Workers project, attach the repo to a Workers app or run `npx wrangler deploy` from the repo root (it will build `./dist` and publish the SPA).
+3. Set environment variables in the Cloudflare Workers dashboard (Settings → Environment Variables) or in `wrangler.toml` under `[vars]`:
+   - `VITE_GEMINI_API_KEY` — if you want live Gemini + Google Search grounding.
+   - `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, and the other `VITE_FIREBASE_*` vars — if you want the vault to sync to Firestore. Without them the app runs in deterministic / local-buffer mode, which is fine for testing the UI and valuation logic.
+4. Deploy. Cloudflare serves `dist/index.html` for `/` and the SPA fallback (`not_found_handling`) handles deep links like `/app/intel` so refreshes don't 404.
+
+A Cloudflare Workers SPA fallback handles routing natively — no rewrite config needed.
 
 ## Project structure
 
