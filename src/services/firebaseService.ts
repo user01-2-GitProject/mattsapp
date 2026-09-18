@@ -10,7 +10,16 @@ import {
   Auth,
   User
 } from "firebase/auth";
-import firebaseConfig from "../../firebase-applet-config.json";
+
+export const getFirebaseConfig = () => ({
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "(default)"
+});
 
 export enum OperationType {
   CREATE = 'create',
@@ -51,8 +60,9 @@ export function initFirebaseService(customApiKey?: string, customProjectId?: str
   db: Firestore | null;
   auth: Auth | null;
 } {
-  const apiKey = customApiKey || firebaseConfig.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "";
-  const projectId = customProjectId || firebaseConfig.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "";
+  const envConfig = getFirebaseConfig();
+  const apiKey = customApiKey || envConfig.apiKey;
+  const projectId = customProjectId || envConfig.projectId;
 
   if (!apiKey || !projectId) {
     return { db: null, auth: null };
@@ -60,15 +70,15 @@ export function initFirebaseService(customApiKey?: string, customProjectId?: str
 
   try {
     const mergedConfig = {
-      ...firebaseConfig,
+      ...envConfig,
       apiKey,
       projectId,
-      authDomain: `${projectId}.firebaseapp.com`
+      authDomain: envConfig.authDomain || `${projectId}.firebaseapp.com`
     };
 
     const app = getApps().length ? getApp() : initializeApp(mergedConfig);
-    const db = (mergedConfig as any).firestoreDatabaseId
-      ? getFirestore(app, (mergedConfig as any).firestoreDatabaseId)
+    const db = mergedConfig.firestoreDatabaseId && mergedConfig.firestoreDatabaseId !== "(default)"
+      ? getFirestore(app, mergedConfig.firestoreDatabaseId)
       : getFirestore(app);
     const auth = getAuth(app);
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Sliders, X, Shield } from "lucide-react";
-import firebaseConfig from "../../firebase-applet-config.json";
+import { getFirebaseConfig } from "../services/firebaseService";
 
 interface ConfigDrawerProps {
   customGatewayUrl: string;
@@ -112,7 +112,7 @@ export const ConfigDrawer: React.FC<ConfigDrawerProps> = ({
                 className="w-full bg-[#090a0f] border border-[#252d3d] rounded p-1.5 text-[10px] text-white outline-none"
               />
               <p className="text-[9px] text-[#64748b]">
-                Cloud Database: {(firebaseConfig as any).firestoreDatabaseId || "(default)"}
+                Cloud Database: {getFirebaseConfig().firestoreDatabaseId || "(default)"}
               </p>
             </div>
           </div>

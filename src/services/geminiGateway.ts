@@ -5,17 +5,16 @@ import {
 } from "../types";
 import { executeMasterValuationFramework } from "../engine/valuationEngine";
 import { INITIAL_CARDS } from "../data";
-import firebaseConfig from "../../firebase-applet-config.json";
 
 const VITE_CONFIG = {
   firebase: {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey || "",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain || "",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId || "",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket || "",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId || "",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId || "",
-    firestoreDatabaseId: firebaseConfig.firestoreDatabaseId || "(default)"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+    firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || import.meta.env.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "(default)"
   },
   geminiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
   apiGatewayUrl: import.meta.env.VITE_API_GATEWAY_URL || ""

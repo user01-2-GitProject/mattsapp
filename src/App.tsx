@@ -15,7 +15,6 @@ import {
   User,
   Auth
 } from "firebase/auth";
-import firebaseConfig from "../firebase-applet-config.json";
 import {
   ActiveSlabData,
   VaultCard,
@@ -23,6 +22,7 @@ import {
 } from "./types";
 import {
   initFirebaseService,
+  getFirebaseConfig,
   handleFirestoreError,
   OperationType
 } from "./services/firebaseService";
@@ -79,8 +79,8 @@ export default function App() {
 
   const [customApiKey, setCustomApiKey] = useState<string>(import.meta.env.VITE_GEMINI_API_KEY || "");
   const [customGatewayUrl, setCustomGatewayUrl] = useState<string>(import.meta.env.VITE_API_GATEWAY_URL || "");
-  const [customFirebaseKey, setCustomFirebaseKey] = useState<string>(firebaseConfig.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "");
-  const [customProjectId, setCustomProjectId] = useState<string>(firebaseConfig.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "");
+  const [customFirebaseKey, setCustomFirebaseKey] = useState<string>(getFirebaseConfig().apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "");
+  const [customProjectId, setCustomProjectId] = useState<string>(getFirebaseConfig().projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "");
 
   const [manualForm, setManualForm] = useState({
     player: "",
