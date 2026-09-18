@@ -113,6 +113,7 @@ export interface LatentCluster {
   beta: number;
   Ac: number;
   Sz: number;
+  CpBase: number;
 }
 
 export interface ShapValues {

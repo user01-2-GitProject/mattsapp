@@ -219,7 +219,7 @@ export function executeMasterValuationFramework({
     year
   });
 
-  const { Sc, beta, Ac, Sz, CpBase } = cluster as any;
+  const { Sc, beta, Ac, Sz, CpBase } = cluster;
 
   const { qualified, trimmed } = filterOutlierComps(rawComps, grade, gradeCompany);
 
