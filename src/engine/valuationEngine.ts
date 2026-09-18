@@ -147,15 +147,25 @@ export function filterOutlierComps(
     };
   });
 
-  const nonSuspicious = processed.filter((c) => !c.isSuspicious);
+  const nonSuspicious: QualifiedComp[] = [];
+  const suspiciousTrimmed: TrimmedComp[] = [];
+
+  for (let i = 0; i < processed.length; i++) {
+    const comp = processed[i];
+    if (comp.isSuspicious) {
+      suspiciousTrimmed.push({
+        ...comp,
+        trimReason: "Suspicious quality flag (shill / lot / damage / unpaid)"
+      });
+    } else {
+      nonSuspicious.push(comp);
+    }
+  }
 
   if (nonSuspicious.length < 4) {
     return {
-      qualified: processed.filter((c) => !c.isSuspicious),
-      trimmed: processed.filter((c) => c.isSuspicious).map(c => ({
-        ...c,
-        trimReason: "Suspicious quality flag (shill / lot / damage / unpaid)"
-      }))
+      qualified: nonSuspicious,
+      trimmed: suspiciousTrimmed
     };
   }
 
