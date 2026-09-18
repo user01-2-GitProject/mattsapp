@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, MouseEvent, FormEvent } from "react";
 import {
   collection,
   onSnapshot,
@@ -294,7 +294,7 @@ export default function App() {
     }
   };
 
-  const handleDeleteCard = async (cardId: string, e?: any) => {
+  const handleDeleteCard = async (cardId: string, e?: MouseEvent) => {
     e?.stopPropagation();
     if (!window.confirm("Confirm purging this asset from your private vault?")) return;
 
