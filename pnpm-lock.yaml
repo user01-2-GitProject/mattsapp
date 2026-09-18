@@ -38,9 +38,6 @@ importers:
       react-dom:
         specifier: ^19.0.1
         version: 19.2.8(react@19.2.8)
-      vite:
-        specifier: ^6.2.3
-        version: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)
     devDependencies:
       '@types/express':
         specifier: ^4.17.21
@@ -63,6 +60,9 @@ importers:
       typescript:
         specifier: ~5.8.2
         version: 5.8.3
+      vite:
+        specifier: ^6.2.3
+        version: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)
 
 packages:
 

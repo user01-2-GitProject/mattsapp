@@ -8,7 +8,8 @@ import {
 import {
   getAuth,
   Auth,
-  User
+  User,
+  UserInfo
 } from "firebase/auth";
 import firebaseConfig from "../../firebase-applet-config.json";
 
@@ -38,7 +39,7 @@ export function handleFirestoreError(
       emailVerified: currentUser?.emailVerified || null,
       isAnonymous: currentUser?.isAnonymous || null,
       tenantId: currentUser?.tenantId || null,
-      providerInfo: currentUser?.providerData?.map((p: any) => ({
+      providerInfo: currentUser?.providerData?.map((p: UserInfo) => ({
         providerId: p.providerId
       })) || []
     }
