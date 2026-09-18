@@ -1,25 +1,153 @@
 import {
   ActiveSlabData,
   CardMeta,
-  MarketplaceComp
+  MarketplaceComp,
+  GroundingChunk,
+  GroundingMetadata,
+  GroundingSource,
 } from "../types";
 import { executeMasterValuationFramework } from "../engine/valuationEngine";
 import { INITIAL_CARDS } from "../data";
-import firebaseConfig from "../../firebase-applet-config.json";
+
+const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
 
 const VITE_CONFIG = {
   firebase: {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey || "",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain || "",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId || "",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket || "",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId || "",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || firebaseConfig.appId || "",
-    firestoreDatabaseId: firebaseConfig.firestoreDatabaseId || "(default)"
+    apiKey: metaEnv.VITE_FIREBASE_API_KEY || "",
+    authDomain: metaEnv.VITE_FIREBASE_AUTH_DOMAIN || "",
+    projectId: metaEnv.VITE_FIREBASE_PROJECT_ID || "",
+    storageBucket: metaEnv.VITE_FIREBASE_STORAGE_BUCKET || "",
+    messagingSenderId: metaEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+    appId: metaEnv.VITE_FIREBASE_APP_ID || "",
+    firestoreDatabaseId: metaEnv.VITE_FIREBASE_DATABASE_ID || metaEnv.VITE_FIREBASE_FIRESTORE_DATABASE_ID || "(default)"
   },
-  geminiKey: import.meta.env.VITE_GEMINI_API_KEY || "",
-  apiGatewayUrl: import.meta.env.VITE_API_GATEWAY_URL || ""
+  geminiKey: metaEnv.VITE_GEMINI_API_KEY || "",
+  apiGatewayUrl: metaEnv.VITE_API_GATEWAY_URL || ""
 };
+
+/** Typesafe shape of the JSON block an LLM returns inside the markdown code fence. */
+export interface ParsedLLMCardData {
+  player?: string;
+  year?: number;
+  set?: string;
+  cardNumber?: string;
+  parallel?: string;
+  serialNumber?: string;
+  attributes?: string;
+  grade?: string;
+  gradeCondition?: string;
+  gradeCompany?: string;
+  certNumber?: string;
+  Hz?: number;
+  Sz?: number;
+  M?: number;
+  verifiedAttributes?: string[];
+  missingAttributes?: string[];
+  rawComps?: MarketplaceComp[];
+}
+
+/**
+ * Robustly parses and validates JSON returned from LLMs.
+ * - Extracts the payload from a markdown code fence or a first `{...}` block.
+ * - Coerces every field to its expected type, rejecting non-finite numbers and
+ *   non-string elements inside string arrays.
+ * - Sanitises rawComps entries individually so a malformed comp cannot poison the
+ *   downstream valuation pipeline.
+ */
+export function safeParseLLMJson(responseText: string): ParsedLLMCardData | null {
+  if (!responseText || typeof responseText !== "string") return null;
+
+  let jsonStr: string | null = null;
+
+  // 1. markdown code fence
+  const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/i);
+  if (jsonMatch && jsonMatch[1]) {
+    jsonStr = jsonMatch[1].trim();
+  } else {
+    // 2. fallback: first balanced { ... } block
+    const firstBrace = responseText.indexOf("{");
+    const lastBrace = responseText.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      jsonStr = responseText.substring(firstBrace, lastBrace + 1).trim();
+    }
+  }
+  if (!jsonStr) return null;
+
+  let rawObj: unknown = null;
+  try {
+    rawObj = JSON.parse(jsonStr);
+  } catch (e) {
+    console.warn("LLM JSON parsing error:", e);
+    return null;
+  }
+
+  if (!rawObj || typeof rawObj !== "object" || Array.isArray(rawObj)) {
+    console.warn("LLM JSON payload is not a valid object");
+    return null;
+  }
+
+  const obj = rawObj as Record<string, unknown>;
+
+  const asString = (val: unknown): string | undefined =>
+    typeof val === "string" ? val : typeof val === "number" ? String(val) : undefined;
+
+  const asFiniteNumber = (val: unknown): number | undefined => {
+    if (typeof val === "number" && Number.isFinite(val)) return val;
+    if (typeof val === "string") {
+      const num = Number(val);
+      if (Number.isFinite(num)) return num;
+    }
+    return undefined;
+  };
+
+  const asStringArray = (val: unknown): string[] | undefined => {
+    if (!Array.isArray(val)) return undefined;
+    return val.map((item) => asString(item)).filter((item): item is string => item !== undefined);
+  };
+
+  const validated: ParsedLLMCardData = {};
+
+  if (obj.player !== undefined) validated.player = asString(obj.player);
+  if (obj.year !== undefined) validated.year = asFiniteNumber(obj.year);
+  if (obj.set !== undefined) validated.set = asString(obj.set);
+  if (obj.cardNumber !== undefined) validated.cardNumber = asString(obj.cardNumber);
+  if (obj.parallel !== undefined) validated.parallel = asString(obj.parallel);
+  if (obj.serialNumber !== undefined) validated.serialNumber = asString(obj.serialNumber);
+  if (obj.attributes !== undefined) validated.attributes = asString(obj.attributes);
+  if (obj.grade !== undefined) validated.grade = asString(obj.grade);
+  if (obj.gradeCondition !== undefined) validated.gradeCondition = asString(obj.gradeCondition);
+  if (obj.gradeCompany !== undefined) validated.gradeCompany = asString(obj.gradeCompany);
+  if (obj.certNumber !== undefined) validated.certNumber = asString(obj.certNumber);
+
+  if (obj.Hz !== undefined) validated.Hz = asFiniteNumber(obj.Hz);
+  if (obj.Sz !== undefined) validated.Sz = asFiniteNumber(obj.Sz);
+  if (obj.M !== undefined) validated.M = asFiniteNumber(obj.M);
+
+  if (obj.verifiedAttributes !== undefined) validated.verifiedAttributes = asStringArray(obj.verifiedAttributes);
+  if (obj.missingAttributes !== undefined) validated.missingAttributes = asStringArray(obj.missingAttributes);
+
+  if (Array.isArray(obj.rawComps)) {
+    const safeComps: MarketplaceComp[] = [];
+    for (const comp of obj.rawComps) {
+      if (comp && typeof comp === "object" && !Array.isArray(comp)) {
+        const compObj = comp as Record<string, unknown>;
+        safeComps.push({
+          price: asFiniteNumber(compObj.price) ?? 0,
+          date: asString(compObj.date) || "Recent comp",
+          venue: asString(compObj.venue) || "Marketplace",
+          grade: asString(compObj.grade) || "10",
+          gradeCompany: asString(compObj.gradeCompany) || "PSA",
+          isShillWarning: Boolean(compObj.isShillWarning),
+          isLotSale: Boolean(compObj.isLotSale),
+          isDamaged: Boolean(compObj.isDamaged)
+        });
+      }
+    }
+    validated.rawComps = safeComps;
+  }
+
+  return validated;
+}
 
 export async function cardIntelligenceGateway({
   query,
@@ -73,10 +201,14 @@ export async function cardIntelligenceGateway({
   const activeKey = developerKey || VITE_CONFIG.geminiKey;
   if (activeKey) {
     try {
+      // SECURITY: constrain the user fragment before it enters the prompt so a
+      // malicious query cannot break the template boundary.
+      const sanitizedQuery = query.trim().slice(0, 500).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
       const prompt = `You are a sports card econometric data ingestion agent.
 Identify the card from the user's natural language fragment, query live verified marketplace comps (eBay sold listings, 130point, PWCC, Goldin, PSA auction history), and extract raw factual transaction data without inventing prices.
 
-USER QUERY / FRAGMENT: "${query.trim()}"
+USER QUERY / FRAGMENT: "${sanitizedQuery}"
 
 INSTRUCTIONS:
 1. Search and retrieve 4 to 8 recent settled sales of this card (or closest grade comps).
@@ -138,10 +270,13 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
   ]
 }`;
 
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${activeKey}`;
+      const endpoint = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent";
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": activeKey
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }]
@@ -153,11 +288,11 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
         const candidate = result.candidates?.[0];
         const responseText = candidate?.content?.parts?.[0]?.text || "";
 
-        const groundingMeta = candidate?.groundingMetadata || {};
+        const groundingMeta: GroundingMetadata = candidate?.groundingMetadata || {};
         const webQueries = groundingMeta.webSearchQueries || [];
-        const sources: { title: string; uri: string }[] = [];
+        const sources: GroundingSource[] = [];
         if (Array.isArray(groundingMeta.groundingChunks)) {
-          groundingMeta.groundingChunks.forEach((chunk: any) => {
+          groundingMeta.groundingChunks.forEach((chunk: GroundingChunk) => {
             if (chunk.web?.uri) {
               sources.push({
                 title: chunk.web.title || chunk.web.uri,
@@ -167,21 +302,12 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
           });
         }
 
-        let parsed: any = null;
-        const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
-        if (jsonMatch && jsonMatch[1]) {
-          try {
-            parsed = JSON.parse(jsonMatch[1]);
-          } catch (e) {
-            console.warn("JSON parsing notice:", e);
-          }
-        }
-
-        const cleanAnalysis = responseText.replace(/```json[\s\S]*?```/, "").trim();
+        const parsed = safeParseLLMJson(responseText);
+        const cleanAnalysis = responseText.replace(/```json[\s\S]*?```/g, "").trim();
 
         const cardMeta: CardMeta = {
           player: parsed?.player || query.slice(0, 24),
-          year: Number(parsed?.year) || 2024,
+          year: typeof parsed?.year === "number" ? parsed.year : 2024,
           set: parsed?.set || "Trading Card Product",
           cardNumber: parsed?.cardNumber || "#--",
           parallel: parsed?.parallel || "Identified Variation",
@@ -200,9 +326,9 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
         };
 
         const marketContext = {
-          Hz: Number(parsed?.Hz) || 0.3,
-          Sz: Number(parsed?.Sz) || 0.1,
-          M: Number(parsed?.M) || 1.0
+          Hz: typeof parsed?.Hz === "number" ? parsed.Hz : 0.3,
+          Sz: typeof parsed?.Sz === "number" ? parsed.Sz : 0.1,
+          M: typeof parsed?.M === "number" ? parsed.M : 1.0
         };
 
         let comps: MarketplaceComp[] = Array.isArray(parsed?.rawComps) ? parsed.rawComps : [];

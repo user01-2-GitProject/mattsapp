@@ -106,13 +106,9 @@ export interface LatentClusterParams {
   CpBase: number;
 }
 
-export interface LatentCluster {
+export interface LatentCluster extends LatentClusterParams {
   clusterId: string;
   clusterName: string;
-  Sc: number;
-  beta: number;
-  Ac: number;
-  Sz: number;
 }
 
 export interface ShapValues {
@@ -150,6 +146,18 @@ export interface ValuationOutput {
     t: string;
     scarcityFactor: string;
   };
+}
+
+export interface GroundingChunk {
+  web?: {
+    title?: string;
+    uri?: string;
+  };
+}
+
+export interface GroundingMetadata {
+  webSearchQueries?: string[];
+  groundingChunks?: GroundingChunk[];
 }
 
 export interface GroundingSource {
