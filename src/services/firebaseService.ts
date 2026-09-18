@@ -36,12 +36,7 @@ export function handleFirestoreError(
     path: path || null,
     authInfo: {
       userId: currentUser?.uid || null,
-      emailVerified: currentUser?.emailVerified || null,
-      isAnonymous: currentUser?.isAnonymous || null,
-      tenantId: currentUser?.tenantId || null,
-      providerInfo: currentUser?.providerData?.map((p: UserInfo) => ({
-        providerId: p.providerId
-      })) || []
+      isAnonymous: currentUser?.isAnonymous ?? null
     }
   };
   console.error("Firestore Error:", JSON.stringify(errInfo));
