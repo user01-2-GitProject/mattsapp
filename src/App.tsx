@@ -21,6 +21,7 @@ import {
   VaultCard,
   CardMeta
 } from "./types";
+import { sanitizeCsvField } from "./utils/csv";
 import {
   initFirebaseService,
   handleFirestoreError,
@@ -416,18 +417,18 @@ export default function App() {
     } else {
       const headers = ["ID", "Player", "Year", "Set", "CardNumber", "Parallel", "Serial", "Grade", "FairValue_USD", "Floor_USD", "Ceiling_USD", "Watchlist"];
       const rows = vaultCards.map((c) => [
-        c.id,
-        `"${c.player.replace(/"/g, '""')}"`,
-        c.year,
-        `"${c.set.replace(/"/g, '""')}"`,
-        `"${c.cardNumber}"`,
-        `"${c.parallel.replace(/"/g, '""')}"`,
-        `"${c.serialNumber}"`,
-        `"${c.gradeCompany} ${c.grade}"`,
-        c.pricePoints?.fairValue || 0,
-        c.pricePoints?.floor || 0,
-        c.pricePoints?.ceiling || 0,
-        c.isWatchlist ? "YES" : "NO"
+        sanitizeCsvField(c.id),
+        sanitizeCsvField(c.player),
+        sanitizeCsvField(c.year),
+        sanitizeCsvField(c.set),
+        sanitizeCsvField(c.cardNumber),
+        sanitizeCsvField(c.parallel),
+        sanitizeCsvField(c.serialNumber),
+        sanitizeCsvField(`${c.gradeCompany} ${c.grade}`),
+        sanitizeCsvField(c.pricePoints?.fairValue || 0),
+        sanitizeCsvField(c.pricePoints?.floor || 0),
+        sanitizeCsvField(c.pricePoints?.ceiling || 0),
+        sanitizeCsvField(c.isWatchlist ? "YES" : "NO")
       ]);
       const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
