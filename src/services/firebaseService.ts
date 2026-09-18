@@ -28,19 +28,14 @@ export function handleFirestoreError(
   authRef?: Auth | { currentUser?: User | null } | null
 ) {
   const currentUser = authRef && 'currentUser' in authRef ? authRef.currentUser : null;
-  // SECURITY: Omit sensitive PII (user email addresses) from error logs to prevent log leakage.
+  // SECURITY: Omit sensitive PII (email, tenantId, providerData) from error logs to prevent log leakage.
   const errInfo = {
     error: error instanceof Error ? error.message : String(error),
     operationType,
     path: path || null,
     authInfo: {
       userId: currentUser?.uid || null,
-      emailVerified: currentUser?.emailVerified || null,
-      isAnonymous: currentUser?.isAnonymous || null,
-      tenantId: currentUser?.tenantId || null,
-      providerInfo: currentUser?.providerData?.map((p: any) => ({
-        providerId: p.providerId
-      })) || []
+      isAnonymous: currentUser?.isAnonymous ?? null
     }
   };
   console.error("Firestore Error:", JSON.stringify(errInfo));
