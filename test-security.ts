@@ -1,5 +1,10 @@
-import assert from "node:assert";
-import { handleFirestoreError, OperationType } from "./src/services/firebaseService.ts";
+import { handleFirestoreError, OperationType } from "./src/services/firebaseService";
+
+function assertEqual(actual: any, expected: any, message?: string) {
+  if (actual !== expected) {
+    throw new Error(message || `Assertion failed: expected ${expected}, got ${actual}`);
+  }
+}
 
 let consoleOutput = "";
 const originalConsoleError = console.error;
@@ -26,18 +31,18 @@ try {
   );
 
   // Assert return value contains non-sensitive fields
-  assert.strictEqual(errInfo.authInfo.userId, "test-user-123");
-  assert.strictEqual(errInfo.authInfo.isAnonymous, false);
+  assertEqual(errInfo.authInfo.userId, "test-user-123", "userId matches");
+  assertEqual(errInfo.authInfo.isAnonymous, false, "isAnonymous matches");
 
   // Assert return value does NOT contain sensitive fields
-  assert.strictEqual((errInfo.authInfo as any).tenantId, undefined);
-  assert.strictEqual((errInfo.authInfo as any).emailVerified, undefined);
-  assert.strictEqual((errInfo.authInfo as any).providerInfo, undefined);
+  assertEqual((errInfo.authInfo as any).tenantId, undefined, "tenantId omitted");
+  assertEqual((errInfo.authInfo as any).emailVerified, undefined, "emailVerified omitted");
+  assertEqual((errInfo.authInfo as any).providerInfo, undefined, "providerInfo omitted");
 
   // Assert console log output does NOT contain sensitive strings
-  assert.strictEqual(consoleOutput.includes("sensitive-tenant-id"), false);
-  assert.strictEqual(consoleOutput.includes("google.com"), false);
-  assert.strictEqual(consoleOutput.includes("emailVerified"), false);
+  assertEqual(consoleOutput.includes("sensitive-tenant-id"), false, "tenantId not in console log");
+  assertEqual(consoleOutput.includes("google.com"), false, "provider not in console log");
+  assertEqual(consoleOutput.includes("emailVerified"), false, "emailVerified not in console log");
 
   originalConsoleError("✅ Security unit test passed!");
 } catch (error) {
