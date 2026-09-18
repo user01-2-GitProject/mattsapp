@@ -240,9 +240,12 @@ export function executeMasterValuationFramework({
   const aValUnscaled = Cp * logFactor * scarcityDecay * C * Ac * Pp * (1 / No) * Ap * Math.pow(Av, 0.2);
   const aVal = Math.round(aValUnscaled);
 
+  const sortedPrices = qualified.length > 0
+    ? qualified.map((c) => c.normalizedPrice).sort((a, b) => a - b)
+    : [];
+
   let Ph = 0;
-  if (qualified.length > 0) {
-    const sortedPrices = qualified.map((c) => c.normalizedPrice).sort((a, b) => a - b);
+  if (sortedPrices.length > 0) {
     const mid = Math.floor(sortedPrices.length / 2);
     Ph = sortedPrices.length % 2 !== 0
       ? sortedPrices[mid]
@@ -273,8 +276,7 @@ export function executeMasterValuationFramework({
   let floorPrice = 0;
   let ceilingPrice = 0;
 
-  if (qualified.length >= 2) {
-    const sortedPrices = qualified.map((c) => c.normalizedPrice).sort((a, b) => a - b);
+  if (sortedPrices.length >= 2) {
     const p20Idx = Math.max(0, Math.floor(sortedPrices.length * 0.20));
     const p85Idx = Math.min(sortedPrices.length - 1, Math.floor(sortedPrices.length * 0.85));
     floorPrice = Math.max(dVal, sortedPrices[p20Idx]);
