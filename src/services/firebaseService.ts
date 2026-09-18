@@ -52,8 +52,11 @@ export function initFirebaseService(customApiKey?: string, customProjectId?: str
   db: Firestore | null;
   auth: Auth | null;
 } {
-  const apiKey = customApiKey || firebaseConfig.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "";
-  const projectId = customProjectId || firebaseConfig.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "";
+  const envApiKey = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_API_KEY : "";
+  const envProjectId = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env.VITE_FIREBASE_PROJECT_ID : "";
+
+  const apiKey = customApiKey || envApiKey || firebaseConfig.apiKey || "";
+  const projectId = customProjectId || envProjectId || firebaseConfig.projectId || "";
 
   if (!apiKey || !projectId) {
     return { db: null, auth: null };

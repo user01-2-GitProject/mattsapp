@@ -80,8 +80,8 @@ export default function App() {
 
   const [customApiKey, setCustomApiKey] = useState<string>(import.meta.env.VITE_GEMINI_API_KEY || "");
   const [customGatewayUrl, setCustomGatewayUrl] = useState<string>(import.meta.env.VITE_API_GATEWAY_URL || "");
-  const [customFirebaseKey, setCustomFirebaseKey] = useState<string>(firebaseConfig.apiKey || import.meta.env.VITE_FIREBASE_API_KEY || "");
-  const [customProjectId, setCustomProjectId] = useState<string>(firebaseConfig.projectId || import.meta.env.VITE_FIREBASE_PROJECT_ID || "");
+  const [customFirebaseKey, setCustomFirebaseKey] = useState<string>(import.meta.env.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey || "");
+  const [customProjectId, setCustomProjectId] = useState<string>(import.meta.env.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId || "");
 
   const [manualForm, setManualForm] = useState({
     player: "",
