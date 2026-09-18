@@ -1,6 +1,9 @@
 import {
   ActiveSlabData,
   CardMeta,
+  GroundingChunk,
+  GroundingMetadata,
+  GroundingSource,
   MarketplaceComp
 } from "../types";
 import { executeMasterValuationFramework } from "../engine/valuationEngine";
@@ -153,11 +156,11 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
         const candidate = result.candidates?.[0];
         const responseText = candidate?.content?.parts?.[0]?.text || "";
 
-        const groundingMeta = candidate?.groundingMetadata || {};
+        const groundingMeta: GroundingMetadata = candidate?.groundingMetadata || {};
         const webQueries = groundingMeta.webSearchQueries || [];
-        const sources: { title: string; uri: string }[] = [];
+        const sources: GroundingSource[] = [];
         if (Array.isArray(groundingMeta.groundingChunks)) {
-          groundingMeta.groundingChunks.forEach((chunk: any) => {
+          groundingMeta.groundingChunks.forEach((chunk: GroundingChunk) => {
             if (chunk.web?.uri) {
               sources.push({
                 title: chunk.web.title || chunk.web.uri,
