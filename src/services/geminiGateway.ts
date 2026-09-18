@@ -73,10 +73,12 @@ export async function cardIntelligenceGateway({
   const activeKey = developerKey || VITE_CONFIG.geminiKey;
   if (activeKey) {
     try {
+      // SECURITY: Sanitize user input query to mitigate prompt injection and escape boundaries
+      const sanitizedQuery = query.trim().slice(0, 500).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
       const prompt = `You are a sports card econometric data ingestion agent.
 Identify the card from the user's natural language fragment, query live verified marketplace comps (eBay sold listings, 130point, PWCC, Goldin, PSA auction history), and extract raw factual transaction data without inventing prices.
 
-USER QUERY / FRAGMENT: "${query.trim()}"
+USER QUERY / FRAGMENT: "${sanitizedQuery}"
 
 INSTRUCTIONS:
 1. Search and retrieve 4 to 8 recent settled sales of this card (or closest grade comps).
