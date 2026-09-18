@@ -138,15 +138,10 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
   ]
 }`;
 
-      // SECURITY: Pass API key via x-goog-api-key HTTP header rather than URL query parameter
-      // to prevent credential exposure in server logs, proxy histories, and network URIs.
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${activeKey}`;
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": activeKey
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           tools: [{ google_search: {} }]
