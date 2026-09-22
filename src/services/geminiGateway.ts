@@ -11,6 +11,28 @@ import { INITIAL_CARDS } from "../data";
 
 const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
 
+function secureRandomIntInclusive(min: number, max: number): number {
+  const lower = Math.ceil(min);
+  const upper = Math.floor(max);
+  const range = upper - lower + 1;
+
+  if (range <= 0) {
+    throw new Error("Invalid secure random range");
+  }
+
+  const maxUint32 = 0x100000000;
+  const limit = maxUint32 - (maxUint32 % range);
+  const array = new Uint32Array(1);
+
+  let value: number;
+  do {
+    crypto.getRandomValues(array);
+    value = array[0];
+  } while (value >= limit);
+
+  return lower + (value % range);
+}
+
 const VITE_CONFIG = {
   firebase: {
     apiKey: metaEnv.VITE_FIREBASE_API_KEY || "",
@@ -531,7 +553,7 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
     grade: parsedGrade,
     gradeCondition: parsedGrade === "10" ? "GEM MT" : parsedGrade === "9" ? "MINT" : "NM-MT",
     gradeCompany: parsedGradeCompany,
-    certNumber: String(Math.floor(10000000 + Math.random() * 90000000)),
+    certNumber: String(secureRandomIntInclusive(10000000, 99999999)),
     verifiedAttributes: [
       `Year: ${parsedYear}`,
       `Subject: ${parsedPlayer}`,
