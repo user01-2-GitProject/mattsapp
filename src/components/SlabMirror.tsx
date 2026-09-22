@@ -13,6 +13,7 @@ import {
   Search
 } from "lucide-react";
 import { ActiveSlabData } from "../types";
+import { sanitizeUrl } from "../utils/security";
 
 interface SlabMirrorProps {
   activeSlabData: ActiveSlabData | null;
@@ -420,7 +421,7 @@ export const SlabMirror: React.FC<SlabMirrorProps> = ({
                   {activeSlabData.sources.map((src, i) => (
                     <a
                       key={i}
-                      href={src.uri}
+                      href={sanitizeUrl(src.uri)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 bg-[#121622] hover:bg-[#1a2030] rounded border border-[#252d3d] flex items-center justify-between text-[10px] text-[#94a3b8] hover:text-[#06b6d4] transition-colors"
