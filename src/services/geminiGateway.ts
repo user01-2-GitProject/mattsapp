@@ -7,6 +7,7 @@ import {
   GroundingSource,
 } from "../types";
 import { executeMasterValuationFramework } from "../engine/valuationEngine";
+import { sanitizeUrl } from "../utils/security";
 import { INITIAL_CARDS } from "../data";
 
 const metaEnv = (import.meta as unknown as { env?: Record<string, string> }).env || {};
@@ -294,10 +295,13 @@ Output your qualitative summary, and AT THE VERY END include a single valid JSON
         if (Array.isArray(groundingMeta.groundingChunks)) {
           groundingMeta.groundingChunks.forEach((chunk: GroundingChunk) => {
             if (chunk.web?.uri) {
-              sources.push({
-                title: chunk.web.title || chunk.web.uri,
-                uri: chunk.web.uri
-              });
+              const safeUri = sanitizeUrl(chunk.web.uri);
+              if (safeUri !== "#") {
+                sources.push({
+                  title: chunk.web.title || chunk.web.uri,
+                  uri: safeUri
+                });
+              }
             }
           });
         }
