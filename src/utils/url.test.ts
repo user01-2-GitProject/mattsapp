@@ -1,84 +1,48 @@
+import { describe, it, expect } from "vitest";
 import { sanitizeUrl } from "./url";
 
-function assertEqual(actual: string, expected: string, message: string) {
-  if (actual !== expected) {
-    console.error(`❌ FAIL: ${message}\n   Expected: ${expected}\n   Actual:   ${actual}`);
-    process.exit(1);
-  } else {
-    console.log(`✅ PASS: ${message}`);
-  }
-}
+describe("URL Sanitization Security", () => {
+  it("allows valid https:// URLs", () => {
+    expect(sanitizeUrl("https://130point.com/sales/")).toBe("https://130point.com/sales/");
+  });
 
-console.log("Running URL sanitization security tests...\n");
+  it("allows valid http:// URLs", () => {
+    expect(sanitizeUrl("http://ebay.com")).toBe("http://ebay.com");
+  });
 
-// 1. Safe HTTP and HTTPS URLs
-assertEqual(
-  sanitizeUrl("https://130point.com/sales/"),
-  "https://130point.com/sales/",
-  "Allows valid https:// URLs"
-);
+  it("allows relative path starting with '/'", () => {
+    expect(sanitizeUrl("/dashboard")).toBe("/dashboard");
+  });
 
-assertEqual(
-  sanitizeUrl("http://ebay.com"),
-  "http://ebay.com",
-  "Allows valid http:// URLs"
-);
+  it("allows anchor fragment starting with '#'", () => {
+    expect(sanitizeUrl("#section")).toBe("#section");
+  });
 
-// 2. Relative URLs
-assertEqual(
-  sanitizeUrl("/dashboard"),
-  "/dashboard",
-  "Allows relative path starting with '/'"
-);
+  it("blocks javascript: protocol scheme", () => {
+    expect(sanitizeUrl("javascript:alert('XSS')")).toBe("#");
+  });
 
-assertEqual(
-  sanitizeUrl("#section"),
-  "#section",
-  "Allows anchor fragment starting with '#'"
-);
+  it("blocks case-insensitive JAVASCRIPT: protocol scheme", () => {
+    expect(sanitizeUrl("JAVASCRIPT:alert(document.cookie)")).toBe("#");
+  });
 
-// 3. XSS vectors via pseudo-protocols
-assertEqual(
-  sanitizeUrl("javascript:alert('XSS')"),
-  "#",
-  "Blocks javascript: protocol scheme"
-);
+  it("blocks data: protocol scheme", () => {
+    expect(sanitizeUrl("data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==")).toBe("#");
+  });
 
-assertEqual(
-  sanitizeUrl("JAVASCRIPT:alert(document.cookie)"),
-  "#",
-  "Blocks case-insensitive JAVASCRIPT: protocol scheme"
-);
+  it("blocks vbscript: protocol scheme", () => {
+    expect(sanitizeUrl("vbscript:msgbox('XSS')")).toBe("#");
+  });
 
-assertEqual(
-  sanitizeUrl("data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg=="),
-  "#",
-  "Blocks data: protocol scheme"
-);
+  it("returns '#' for null input", () => {
+    expect(sanitizeUrl(null)).toBe("#");
+  });
 
-assertEqual(
-  sanitizeUrl("vbscript:msgbox('XSS')"),
-  "#",
-  "Blocks vbscript: protocol scheme"
-);
+  it("returns '#' for undefined input", () => {
+    expect(sanitizeUrl(undefined)).toBe("#");
+  });
 
-// 4. Null, undefined, and non-string values
-assertEqual(
-  sanitizeUrl(null),
-  "#",
-  "Returns '#' for null input"
-);
-
-assertEqual(
-  sanitizeUrl(undefined),
-  "#",
-  "Returns '#' for undefined input"
-);
-
-assertEqual(
-  sanitizeUrl(""),
-  "#",
-  "Returns '#' for empty string input"
-);
-
-console.log("\nAll URL sanitization tests passed successfully!");
+  it("returns '#' for empty string input", () => {
+    expect(sanitizeUrl("")).toBe("#");
+  });
+});
