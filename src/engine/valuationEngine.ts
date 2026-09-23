@@ -5,7 +5,6 @@ import {
   TrimmedComp,
   ValuationOutput,
   LatentCluster,
-  ShapValues,
   PricePoints,
   IAS38Accounting
 } from "../types";
@@ -14,8 +13,9 @@ import {
  * Returns condition multiplier based on company and grade designation.
  */
 export function resolveGradeMultiplier(grade: string | number, company: string): number {
-  const gStr = String(grade || "").trim();
-  const cStr = String(company || "").toUpperCase();
+  if (!grade && !company) return 1.0;
+  const gStr = typeof grade === "string" ? grade.trim() : String(grade || "").trim();
+  const cStr = typeof company === "string" ? company.toUpperCase() : String(company || "").toUpperCase();
 
   if (cStr === "RAW" || gStr === "RAW" || gStr === "Ungraded") return 1.0;
   if (gStr.includes("10")) return cStr === "BGS" ? 5.2 : 4.2;
@@ -26,6 +26,34 @@ export function resolveGradeMultiplier(grade: string | number, company: string):
   if (gStr.includes("7")) return 0.88;
   return 1.0;
 }
+
+// Static cluster definitions hoisted to module scope to avoid re-allocating array & objects on every function call
+const LATENT_CLUSTERS = [
+  {
+    id: "C0_LIQUID_BASE",
+    name: "Liquid Modern Base Commodity",
+    centroid: [1.0, 0.9, 0.1, 0.05],
+    params: { Sc: 0.85, beta: 0.90, Ac: 0.96, Sz: 35000, CpBase: 15 }
+  },
+  {
+    id: "C1_NUMBERED_PARALLEL",
+    name: "Mid-Tier Serialized Parallel",
+    centroid: [0.35, 0.7, 0.3, 0.08],
+    params: { Sc: 0.35, beta: 0.65, Ac: 0.93, Sz: 2400, CpBase: 45 }
+  },
+  {
+    id: "C2_GRAIL_AUTO",
+    name: "Low-Numbered Grail / Auto",
+    centroid: [0.05, 0.8, 0.9, 0.06],
+    params: { Sc: 0.08, beta: 0.32, Ac: 0.89, Sz: 150, CpBase: 120 }
+  },
+  {
+    id: "C3_VINTAGE_HOF",
+    name: "Vintage Sovereign Heritage",
+    centroid: [0.75, 0.5, 0.0, 0.95],
+    params: { Sc: 0.22, beta: 0.45, Ac: 0.91, Sz: 850, CpBase: 65 }
+  }
+];
 
 /**
  * Step 3: K-Means Latent Parameter Clustering
@@ -46,62 +74,35 @@ export function deriveLatentParametersByCluster({
   year: number;
 }): LatentCluster {
   let serialNum = 9999;
-  if (typeof serialNumber === "string") {
+  if (typeof serialNumber === "number") {
+    serialNum = serialNumber;
+  } else if (typeof serialNumber === "string") {
     const match = serialNumber.match(/\/(\d+)/);
     if (match) serialNum = parseInt(match[1], 10);
-  } else if (typeof serialNumber === "number") {
-    serialNum = serialNumber;
   }
 
-  // Feature vector: [normalizedSerial, rookieWeight, autoWeight, ageWeight]
-  const targetVector = [
-    Math.min(serialNum / 500, 1.0),
-    isRookie ? 1.0 : 0.0,
-    isAuto ? 1.0 : 0.0,
-    Math.min((2025 - (year || 2024)) / 40, 1.0)
-  ];
+  // Feature vector components evaluated scalar-wise to prevent array allocation
+  const v0 = Math.min(serialNum / 500, 1.0);
+  const v1 = isRookie ? 1.0 : 0.0;
+  const v2 = isAuto ? 1.0 : 0.0;
+  const v3 = Math.min((2025 - (year || 2024)) / 40, 1.0);
 
-  const clusters = [
-    {
-      id: "C0_LIQUID_BASE",
-      name: "Liquid Modern Base Commodity",
-      centroid: [1.0, 0.9, 0.1, 0.05],
-      params: { Sc: 0.85, beta: 0.90, Ac: 0.96, Sz: 35000, CpBase: 15 }
-    },
-    {
-      id: "C1_NUMBERED_PARALLEL",
-      name: "Mid-Tier Serialized Parallel",
-      centroid: [0.35, 0.7, 0.3, 0.08],
-      params: { Sc: 0.35, beta: 0.65, Ac: 0.93, Sz: 2400, CpBase: 45 }
-    },
-    {
-      id: "C2_GRAIL_AUTO",
-      name: "Low-Numbered Grail / Auto",
-      centroid: [0.05, 0.8, 0.9, 0.06],
-      params: { Sc: 0.08, beta: 0.32, Ac: 0.89, Sz: 150, CpBase: 120 }
-    },
-    {
-      id: "C3_VINTAGE_HOF",
-      name: "Vintage Sovereign Heritage",
-      centroid: [0.75, 0.5, 0.0, 0.95],
-      params: { Sc: 0.22, beta: 0.45, Ac: 0.91, Sz: 850, CpBase: 65 }
-    }
-  ];
+  let nearest = LATENT_CLUSTERS[0];
+  let minSqDistance = Infinity;
 
-  let nearest = clusters[0];
-  let minDistance = Infinity;
-
-  clusters.forEach((c) => {
-    let sumSq = 0;
-    for (let i = 0; i < targetVector.length; i++) {
-      sumSq += Math.pow(targetVector[i] - c.centroid[i], 2);
-    }
-    const dist = Math.sqrt(sumSq);
-    if (dist < minDistance) {
-      minDistance = dist;
+  for (let i = 0; i < LATENT_CLUSTERS.length; i++) {
+    const c = LATENT_CLUSTERS[i];
+    const d0 = v0 - c.centroid[0];
+    const d1 = v1 - c.centroid[1];
+    const d2 = v2 - c.centroid[2];
+    const d3 = v3 - c.centroid[3];
+    // Compare squared distance directly to avoid expensive Math.sqrt calls
+    const sqDist = d0 * d0 + d1 * d1 + d2 * d2 + d3 * d3;
+    if (sqDist < minSqDistance) {
+      minSqDistance = sqDist;
       nearest = c;
     }
-  });
+  }
 
   return {
     clusterId: nearest.id,
@@ -124,20 +125,24 @@ export function filterOutlierComps(
   }
 
   const targetMult = resolveGradeMultiplier(targetGrade, targetCompany);
+  const processed: QualifiedComp[] = new Array(rawComps.length);
+  const nonSuspicious: QualifiedComp[] = [];
+  const suspiciousTrimmed: TrimmedComp[] = [];
 
-  const processed: QualifiedComp[] = rawComps.map((c, index) => {
+  for (let index = 0; index < rawComps.length; index++) {
+    const c = rawComps[index];
     const rawPrice = Number(c.price || c.acceptedPrice) || 0;
     const compMult = resolveGradeMultiplier(c.grade || "RAW", c.gradeCompany || "RAW");
     const normalizedPrice = Math.round(rawPrice * (targetMult / Math.max(0.2, compMult)));
 
     const isSuspicious =
-      Boolean(c.isShillWarning) ||
-      Boolean(c.isLotSale) ||
-      Boolean(c.isDamaged) ||
-      Boolean(c.unpaid) ||
+      !!c.isShillWarning ||
+      !!c.isLotSale ||
+      !!c.isDamaged ||
+      !!c.unpaid ||
       rawPrice <= 0;
 
-    return {
+    const comp: QualifiedComp = {
       ...c,
       id: c.id || `comp_${index + 1}`,
       rawPrice,
@@ -145,44 +150,51 @@ export function filterOutlierComps(
       compMult,
       isSuspicious
     };
-  });
 
-  const nonSuspicious = processed.filter((c) => !c.isSuspicious);
+    processed[index] = comp;
+
+    if (isSuspicious) {
+      suspiciousTrimmed.push({
+        ...comp,
+        trimReason: "Suspicious quality flag (shill / lot / damage / unpaid)"
+      });
+    } else {
+      nonSuspicious.push(comp);
+    }
+  }
 
   if (nonSuspicious.length < 4) {
     return {
-      qualified: processed.filter((c) => !c.isSuspicious),
-      trimmed: processed.filter((c) => c.isSuspicious).map(c => ({
-        ...c,
-        trimReason: "Suspicious quality flag (shill / lot / damage / unpaid)"
-      }))
+      qualified: nonSuspicious,
+      trimmed: suspiciousTrimmed
     };
   }
 
-  const sorted = [...nonSuspicious].sort((a, b) => a.normalizedPrice - b.normalizedPrice);
-  const q1Index = Math.floor(sorted.length * 0.25);
-  const q3Index = Math.floor(sorted.length * 0.75);
-  const q1 = sorted[q1Index].normalizedPrice;
-  const q3 = sorted[q3Index].normalizedPrice;
+  // Sort nonSuspicious in place without array spread copies
+  nonSuspicious.sort((a, b) => a.normalizedPrice - b.normalizedPrice);
+  const q1Index = Math.floor(nonSuspicious.length * 0.25);
+  const q3Index = Math.floor(nonSuspicious.length * 0.75);
+  const q1 = nonSuspicious[q1Index].normalizedPrice;
+  const q3 = nonSuspicious[q3Index].normalizedPrice;
   const iqr = q3 - q1;
   const lowerBound = Math.max(5, q1 - 1.5 * iqr);
   const upperBound = q3 + 1.5 * iqr;
 
   const qualified: QualifiedComp[] = [];
-  const trimmed: TrimmedComp[] = [];
+  const trimmed: TrimmedComp[] = suspiciousTrimmed;
 
-  processed.forEach((comp) => {
-    if (comp.isSuspicious || comp.normalizedPrice < lowerBound || comp.normalizedPrice > upperBound) {
+  // Filter nonSuspicious items in sorted order directly
+  for (let i = 0; i < nonSuspicious.length; i++) {
+    const comp = nonSuspicious[i];
+    if (comp.normalizedPrice < lowerBound || comp.normalizedPrice > upperBound) {
       trimmed.push({
         ...comp,
-        trimReason: comp.isSuspicious
-          ? "Suspicious quality flag (shill / lot / damage)"
-          : `Statistical anomaly (outside IQR range: $${Math.round(lowerBound)}-$${Math.round(upperBound)})`
+        trimReason: `Statistical anomaly (outside IQR range: $${Math.round(lowerBound)}-$${Math.round(upperBound)})`
       });
     } else {
       qualified.push(comp);
     }
-  });
+  }
 
   return { qualified, trimmed };
 }
@@ -207,8 +219,9 @@ export function executeMasterValuationFramework({
     attributes = ""
   } = cardMeta;
 
-  const isRookie = attributes.toLowerCase().includes("rookie") || attributes.toLowerCase().includes("rc");
-  const isAuto = attributes.toLowerCase().includes("auto") || attributes.toLowerCase().includes("signature");
+  const lowerAttributes = attributes.toLowerCase();
+  const isRookie = lowerAttributes.includes("rookie") || lowerAttributes.includes("rc");
+  const isAuto = lowerAttributes.includes("auto") || lowerAttributes.includes("signature");
   const isVintage = year < 1980;
 
   const cluster = deriveLatentParametersByCluster({
@@ -240,8 +253,9 @@ export function executeMasterValuationFramework({
   const aValUnscaled = Cp * logFactor * scarcityDecay * C * Ac * Pp * (1 / No) * Ap * Math.pow(Av, 0.2);
   const aVal = Math.round(aValUnscaled);
 
+  // qualified comps from filterOutlierComps are already sorted by normalizedPrice
   const sortedPrices = qualified.length > 0
-    ? qualified.map((c) => c.normalizedPrice).sort((a, b) => a - b)
+    ? qualified.map((c) => c.normalizedPrice)
     : [];
 
   let Ph = 0;
@@ -261,8 +275,12 @@ export function executeMasterValuationFramework({
   const M = Math.max(0.85, Math.min(1.15, marketContext?.M ?? 1.0));
 
   let printRun = 9999;
-  const serialMatch = String(serialNumber).match(/\/(\d+)/);
-  if (serialMatch) printRun = parseInt(serialMatch[1], 10);
+  if (typeof serialNumber === "number") {
+    printRun = serialNumber;
+  } else {
+    const serialMatch = String(serialNumber).match(/\/(\d+)/);
+    if (serialMatch) printRun = parseInt(serialMatch[1], 10);
+  }
   const scarcityFactor = Math.pow(500 / Math.max(1, printRun), 0.16);
 
   const sentimentMultiplier = 1 + (0.15 * Hz) - (0.10 * SzSentiment);
@@ -286,9 +304,10 @@ export function executeMasterValuationFramework({
     ceilingPrice = Math.round(calculatedFairValue * 1.25);
   }
 
+  const targetGradeMult = resolveGradeMultiplier(grade, gradeCompany);
   const shapBase = Math.round(Ph);
   const shapScarcity = Math.round(Ph * (scarcityFactor - 1.0));
-  const shapGrade = Math.round(Ph * (resolveGradeMultiplier(grade, gradeCompany) - 1.0) * 0.4);
+  const shapGrade = Math.round(Ph * (targetGradeMult - 1.0) * 0.4);
   const shapHype = Math.round(Ph * (0.15 * Hz));
   const shapSentiment = Math.round(Ph * (-0.10 * SzSentiment));
   const shapMacro = Math.round(Ph * (M - 1.0));
